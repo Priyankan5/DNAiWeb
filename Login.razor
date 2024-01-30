@@ -1,0 +1,113 @@
+﻿@page "/Account/Login"
+@using Microsoft.AspNetCore.Authentication.Google
+@inject NavigationManager NavigationManager
+@using System.ComponentModel.DataAnnotations
+@using DNAiWeb.Components.Account
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Identity
+@using DNAiBase.Data
+@inject IAuthenticationService Authentication
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject ILogger<Login> Logger
+
+
+<PageTitle>Login</PageTitle>
+
+<h1>Log in</h1>
+@if (errorMessage != null)
+{
+    <MudAlert Severity="Severity.Error">@errorMessage</MudAlert>
+}
+<EditForm Model="@Input" method="post" OnValidSubmit="LoginUser" FormName="login">
+    <DataAnnotationsValidator />
+    <MudItem xs="12" sm="12">
+        <MudCard>
+            <MudCardContent>
+                <MudTextField Label="Email" @bind-Value="Input.Email" For="@(() => Input.Email)" />
+                <MudTextField Label="Password" Class="mt-3"
+                              @bind-Value="Input.Password" For="@(() => Input.Password)" InputType="InputType.Password" />
+                <MudCheckBox @bind-Checked="Input.RememberMe" Label="Remember Me" Class="mt-3" />
+                <MudText Class="mt-3">New User ? <MudLink Href="/Account/Register">Register Now</MudLink></MudText>
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="mb-3" @onclick="AuthenticateWithGoogle">Login with Google</MudButton>
+                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Login</MudButton>
+           </MudCardActions>
+        </MudCard>
+    </MudItem>
+</EditForm>
+
+@code {
+
+    public InputModel Input = new InputModel();
+
+    private string? errorMessage;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    private void AuthenticateWithGoogle()
+    {
+        var properties = new AuthenticationProperties { RedirectUri = "signin-google" };
+        //NavigationManager.NavigateTo($"authentication/login?scheme={GoogleDefaults.AuthenticationScheme}&returnUrl=signin-google", true);
+        NavigationManager.NavigateTo("/signin-google");
+    }
+   
+
+    /*public async Task AuthenticateWithGoogle()
+    {
+        var properties = new AuthenticationProperties { RedirectUri = "/Account/GoogleLoginCallback" };
+
+        // Use NavigationManager to initiate the authentication challenge
+        await NavigationManager.NavigateTo($"authentication/login?scheme={GoogleDefaults.AuthenticationScheme}&returnUrl=/Account/GoogleLoginCallback");
+    }*/
+
+   public async Task LoginUser()
+    {
+        var usr = await UserManager.FindByEmailAsync(Input.Email);
+        if (usr == null)
+        {
+            errorMessage = "User not found";
+            return;
+        }
+
+        if (await SignInManager.CanSignInAsync(usr))
+        {
+            var result = await SignInManager.CheckPasswordSignInAsync(usr, Input.Password, true);
+            if (result == Microsoft.AspNetCore.Identity.SignInResult.Success)
+            {
+                Guid key = Guid.NewGuid();
+                BlazorCookieLoginMiddleware.Logins[key] = new LoginInfo { Email = Input.Email, Password = Input.Password };
+                NavigationManager.NavigateTo($"/login?key={key}", true);
+            }
+            else
+            {
+                errorMessage = "Login failed. Check your password.";
+            }
+        }
+        else
+        {
+            errorMessage = "Your account is blocked";
+        }
+    }
+
+    
+
+    public class InputModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+
+        [Display(Name = "Remember me?")]
+        public bool RememberMe { get; set; }
+    }
+}

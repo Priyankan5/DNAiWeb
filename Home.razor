@@ -1,0 +1,53 @@
+﻿@page "/"
+
+@using DNAiWeb.Components.Layout
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+
+@attribute [Authorize]
+
+@inject UserScopedService UserScopedService
+@inject NavigationManager NavigationManager
+@inject IDialogService DialogService
+
+<PageTitle>DNAi Longevity</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Welcome Back
+    <AuthorizeView>
+        , @context.User.Identity?.Name!
+</AuthorizeView></MudText>
+<MudText Class="mb-8">DNAi Longevity for a healthy and happy life</MudText>
+<MudCard>
+    <MudCardHeader>
+        <h3>With DNAi Longevity you can</h3>
+    </MudCardHeader>
+    <MudCardContent>
+        Track your health and fitness, and lead a cancer free life using our genomics and AI based platform.
+    </MudCardContent>
+    <MudCardActions Class="mx-2">
+        <MudButton Color="Color.Primary" Class="my-4 mx-4" Variant="Variant.Filled" OnClick="@TakeCRTest">DNAi Longevity Test</MudButton>
+        <MudButton Color="Color.Secondary" Class="my-4 mx-4" Variant="Variant.Filled" OnClick="@GenomicsTest">Sequence Your DNA</MudButton>
+        <MudButton Color="Color.Tertiary" Class="my-4 mx-4" Variant="Variant.Filled" OnClick="@ShowRisk">Show Cancer Risk</MudButton>
+    </MudCardActions>
+</MudCard>
+
+@code {
+    
+    private void TakeCRTest()
+    {
+        NavigationManager.NavigateTo($"/cancer-risk/Cancer Risk Test");
+    }
+    
+    private void GenomicsTest()
+    {
+        NavigationManager.NavigateTo($"/get-genes");
+    }
+    
+    private async Task ShowRisk()
+    {
+        DialogOptions maxWidth = new DialogOptions() { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        await DialogService.ShowAsync<ReportDialog>("Report", new DialogParameters<ReportDialog> { { "Report", null } }, maxWidth);
+    }
+}
+
+
